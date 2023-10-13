@@ -1,10 +1,10 @@
 import click
 import numpy as np
 from sklearn.model_selection import cross_val_score
+from data.make_dataset import make_dataset
+from features.make_features import make_features
+from model.main import make_model, DumpableModel
 
-from src.data.make_dataset import make_dataset
-from src.features.make_features import make_features
-from src.model.main import make_model
 
 @click.group()
 def cli():
@@ -17,9 +17,11 @@ def cli():
 @click.option("--model_dump_filename", default="models/dump.json", help="File to dump model")
 def train(task, input_filename, model_dump_filename):
     df = make_dataset(input_filename)
-    X, y = make_features(df)
+    # explore_data(df)
 
-    model = make_model()
+    X, y = make_features(df, task)
+
+    model = make_model(dumpable=True)
     model.fit(X, y)
 
     return model.dump(model_dump_filename)
@@ -41,29 +43,24 @@ def evaluate(task, input_filename):
     # Read CSV
     df = make_dataset(input_filename)
 
-    # Make features (tokenization, lowercase, stopwords, stemming...)
+    # Make features (lowercase, stopwords, stemming...)
     X, y = make_features(df, task)
 
     # Object with .fit, .predict methods
-    model = make_model()
-
-    # Run k-fold cross validation. Print results
+    model = make_model(dumpable=False)
     return evaluate_model(model, X, y)
 
 
 def evaluate_model(model, X, y):
     # Scikit learn has function for cross validation
     scores = cross_val_score(model, X, y, scoring="accuracy")
-
     print(f"Got accuracy {100 * np.mean(scores)}%")
-
     return scores
 
 
 cli.add_command(train)
 cli.add_command(test)
 cli.add_command(evaluate)
-
 
 if __name__ == "__main__":
     cli()
