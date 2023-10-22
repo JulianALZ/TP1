@@ -43,12 +43,12 @@ from sklearn.pipeline import Pipeline
 from joblib import dump, load
 
 
-def make_model(dumpable=True):
-    model = Pipeline([
-        ("count_vectorizer", CountVectorizer()),
-
-        # Uncomment the model you want to test
-
+def make_model(task, dumpable=True):
+    if task == "is_comic_video":
+        model = Pipeline([
+            ("count_vectorizer", CountVectorizer()),
+            ("classifier", RandomForestClassifier()),
+            
         # Random Forest
         # ("random_forest", RandomForestClassifier()),    # 89-91 %
 
@@ -59,8 +59,16 @@ def make_model(dumpable=True):
         # ("classifier", SVC()),  # ~92%
 
         # Multinomial Naive Bayes
-        ("classifier", MultinomialNB()),  # ~ 89%
-    ])
+        #("classifier", MultinomialNB()),
+        ])
+    elif task == "is_name":
+        model = Pipeline([
+            ("count_vectorizer", CountVectorizer()),
+            ("classifier", MultinomialNB())
+        ])
+    else:
+        raise ValueError("Unknown task")
+    
     if dumpable:
         return DumpableModel(model)
     else:
