@@ -25,7 +25,7 @@ def train(task, input_filename, model_dump_filename, test_size):
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)#ajout
 
-    model = make_model(dumpable=True)
+    model = make_model(task=task, dumpable=True)
     model.fit(X, y)
 
     return model.dump(model_dump_filename)
