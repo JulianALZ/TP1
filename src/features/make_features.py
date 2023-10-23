@@ -59,3 +59,61 @@ def get_output(df, task):
         raise ValueError("Unknown task")
 
     return y
+
+def preprocess_text_for_features(text):
+    try:
+        # Check if the input is string type
+        if isinstance(text, str):
+            # Convert to lowercase but keep original for some feature extraction
+            original_text = text[:]
+            text = text.lower()
+
+            # Only remove unwanted characters, but keep punctuations for feature extraction
+            text = re.sub(r'[^a-zA-Z\s.,!?]', '', text)
+
+            return original_text, text
+        else:
+            print("Input is not a string")
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+
+def extract_aggregated_features(text):
+    # Preprocess the text
+    original_sentence, sentence = preprocess_text_for_features(text)
+    sentence_words = sentence.split()
+    original_sentence_words = original_sentence.split()
+    
+    # Calculate the features
+    total_words = len(sentence_words)
+    capitalized_words = sum(1 for word in original_sentence_words if word[0].isupper())
+    has_exclamation = 1 if "!" in original_sentence else 0
+    has_question = 1 if "?" in original_sentence else 0
+
+    # Define the features dictionary
+    features = {
+        "total_words": total_words,
+        "capitalized_words": capitalized_words,
+        "has_exclamation": has_exclamation,
+        "has_question": has_question
+    }
+    
+    return features
+
+# Test the function with a sample text
+extract_aggregated_features("L'humeur de Marina Rollman!")
+
+def make_aggregated_features_and_labels(df, task):
+    X = []
+    y = []
+
+    for index, row in df.iterrows():
+        features = extract_aggregated_features(row['video_name'])
+        # Convert the label string representation to a list and aggregate
+        label_list = eval(row[task])
+        label = 1 if any(label_list) else 0
+        
+        X.append(features)
+        y.append(label)
+
+    return X, y
+
