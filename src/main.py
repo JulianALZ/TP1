@@ -21,9 +21,21 @@ def train(task, input_filename, model_dump_filename, test_size):
     df = make_dataset(input_filename)
     # explore_data(df)
 
+    # mismatched_rows = []
+    #
+    # for index, row in df.iterrows():
+    #     num_words = len(row['video_name'].split())
+    #     num_labels = len(eval(row['is_name']))
+    #     if num_words != num_labels:
+    #         mismatched_rows.append((index, row['video_name'], row['is_name'], num_words, num_labels))
+    #
+    # # Display the mismatched rows
+    # print(len(mismatched_rows))
+
+
     X, y = make_features(df, task)
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)#ajout
+    # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)#ajout
 
     model = make_model(task=task, dumpable=True)
     model.fit(X, y)
@@ -67,7 +79,7 @@ def evaluate(task, input_filename):
     X, y = make_features(df, task)
 
     # Object with .fit, .predict methods
-    model = make_model(dumpable=False)
+    model = make_model(task=task, dumpable=False)
     return evaluate_model(model, X, y)
 
 
