@@ -1,6 +1,8 @@
 import click
 import numpy as np
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_predict
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
 from data.make_dataset import make_dataset
 from features.make_features import make_features
 from model.main_model import make_model, DumpableModel
@@ -53,13 +55,17 @@ def test(task, input_filename, model_dump_filename, output_filename):
 
     # 3. Predict using the model
     predictions = model.predict(X_test)
-    print("predictions = ", predictions )
+    print("predictions = ", predictions)
 
     reshaped_pred = reshape_predictions_using_position(predictions, X_test)
 
     # 4. Save predictions to a file
     with open(output_filename, "w", encoding='utf-8') as f:
-        for video_name, is_name, is_comic, comic_name, tokens, prediction in zip(test_data["video_name"], test_data["is_name"], test_data["is_comic"], test_data["comic_name"], test_data["tokens"], reshaped_pred):
+        for video_name, is_name, is_comic, comic_name, tokens, prediction in zip(test_data["video_name"],
+                                                                                 test_data["is_name"],
+                                                                                 test_data["is_comic"],
+                                                                                 test_data["comic_name"],
+                                                                                 test_data["tokens"], reshaped_pred):
             f.write(f"{video_name},{is_name},{is_comic},{comic_name}, {tokens}, {prediction}\n")
 
     print(f"Predictions with video names saved to {output_filename}")
@@ -80,15 +86,34 @@ def evaluate(task, input_filename):
 
 
 def evaluate_model(model, X, y):
-    # Scikit learn has function for cross validation
-    scores = cross_val_score(model, X, y, scoring="accuracy")
-    print(f"Got accuracy {100 * np.mean(scores)}%")
-    return scores
+    # Effectuer une validation croisée pour obtenir des prédictions
+    y_pred = cross_val_predict(model, X, y, cv=5)
+
+    # Calculer l'accuracy, la précision, le rappel et le F1-score
+    accuracy = accuracy_score(y, y_pred)  # Pourcentage de prédictions correctes
+    precision = precision_score(y, y_pred, average='weighted')  # Pourcentage de prédictions positives correctes
+    recall = recall_score(y, y_pred, average='weighted')  # Pourcentage de vraies positives par rapport à tous les vrais échantillons
+    f1 = f1_score(y, y_pred, average='weighted')  # Moyenne harmonique de précision et rappel
+
+    print(f"Accuracy: {100 * accuracy:.2f}%")
+    print(f"Precision: {100 * precision:.2f}%")
+    print(f"Recall: {100 * recall:.2f}%")
+    print(f"F1 Score: {100 * f1:.2f}%")
+
+    return accuracy, precision, recall, f1
+
+
+# def evaluate_model(model, X, y):
+#     # Scikit learn has function for cross validation
+#     scores = cross_val_score(model, X, y, scoring="accuracy")
+#     print(f"Got accuracy {100 * np.mean(scores)}%")
+#     return scores
 
 
 cli.add_command(train)
 cli.add_command(test)
 cli.add_command(evaluate)
+
 
 def reshape_predictions_using_position(predictions, X_test):
     reshaped_predictions = []

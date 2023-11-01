@@ -49,10 +49,11 @@ def make_model(task, dumpable=True):
     elif task == "is_name":
         model = Pipeline([
             ("dict_vectorizer", DictVectorizer(sparse=True)),
-            # ("classifier", MultinomialNB()),  # 95.20305499785123%
-            # ("classifier", LogisticRegression(max_iter=1000)),  #  96.13070494874881%
-            # ("classifier", RandomForestClassifier()),  # 95.34805079281293%
-            ("classifier", SVC())  # 96.14742036872373%
+            # ("classifier", MultinomialNB()),  # Accuracy: 95.20% / Precision: 93.16% / Recall: 95.20% / F1 Score: 94.08%
+            # ("classifier", LogisticRegression(max_iter=1000)),  #  Accuracy: 96.13% / Precision: 92.44% / Recall: 96.13% / F1 Score: 94.25%
+            # ("classifier", RandomForestClassifier()),  # Accuracy: 95.51% / Precision: 93.77% / Recall: 95.51% / F1 # Score: 94.46%
+            ("classifier", SVC())  # Accuracy: 96.15% / Precision: 92.44% / Recall: 96.15% / F1 Score: 94.26%
+
         ])
     else:
         raise ValueError("Unknown task")
