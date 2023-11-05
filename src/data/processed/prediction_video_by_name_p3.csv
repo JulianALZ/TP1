@@ -1,0 +1,3 @@
+Unnamed: 0,video_name,is_name,is_comic,comic_name,tokens,NER_result
+20,La voix du sexe des Belges le retour La chronique de Laurence Bibot,"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1]",1,"[""Laurence Bibot""]","[""La"", ""voix"", ""du"", ""sexe"", ""des"", ""Belges"", "":"", ""le"", ""retour"", ""-"", ""La"", ""chronique"", ""de"", ""Laurence"", ""Bibot""]",['Laurence Bibot']
+21,La voix de la polémique la plus rentable La chronique de Laurence Bibot,"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1]",1,"[""Laurence Bibot""]","[""La"", ""voix"", ""de"", ""la"", ""pol\u00e9mique"", ""la"", ""plus"", ""rentable"", ""-"", ""La"", ""chronique"", ""de"", ""Laurence"", ""Bibot""]",['Laurence Bibot']

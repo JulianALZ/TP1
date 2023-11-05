@@ -79,8 +79,8 @@ def test(task, input_filename, model_dump_filename, output_filename):
         # Filtre les vidéos qui contiennent le nom spécifié
         name_to_search = "Laurence Bibot"  # Remplacez par le nom que vous recherchez
         df_videos_with_name = ner_model.find_videos_with_name(df_processed, name_to_search)
-        df_videos_with_name.to_csv(output_filename, index=False)
-        print(f"Predictions with NER NAMES for video saved to {output_filename}")
+        df_videos_with_name.to_csv("data/processed/prediction_video_by_name_p3.csv", index=False)
+        print(f"Predictions with NER NAMES for video saved to data/processed/prediction_video_by_name_p3.csv")
 
         print(df_videos_with_name)
 
