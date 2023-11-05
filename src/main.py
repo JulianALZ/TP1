@@ -10,6 +10,8 @@ from features.make_features import make_features
 from model.main_model import make_model, DumpableModel
 from sklearn.model_selection import train_test_split
 
+from NER_model import NER_Model
+
 
 @click.group()
 def cli():
@@ -24,20 +26,32 @@ def cli():
 def train(task, input_filename, model_dump_filename, test_size):
     df = make_dataset(input_filename)
     # Drop bugged row due of ":"
-    indices_to_drop = [75, 95, 108, 159, 179, 182, 231, 360, 377, 392, 404, 410, 417, 483, 507, 541, 693, 742, 763, 829,
-                       843, 844, 877, 881, 992]
+    indices_to_drop = [75, 95, 108, 159, 179, 182, 231, 360, 377, 392, 404, 410, 417, 483, 507, 541, 693, 742, 763, 829, 843, 844, 877, 881, 992]
     df = df.drop(indices_to_drop)
     # explore_data(df)
 
-    X, y, tokens_list = make_features(df, task)
+    if task == "NER_MODEL":
+        # Instancier le processeur de texte
+        ner_model = NER_Model()
 
-    # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42) #ajout
+        # Traiter le dataframe pour extraire les entités et ajouter une nouvelle colonne avec les résultats NER
+        df_processed = ner_model.process_dataframe(df)
+        print(df_processed)
 
-    model = make_model(task=task, dumpable=True)
+        return
 
-    model.fit(X, y)
+    else :
+        X, y, tokens_list = make_features(df, task)
 
-    return model.dump(model_dump_filename)
+        # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42) #ajout
+
+        model = make_model(task=task, dumpable=True)
+
+        model.fit(X, y)
+
+        return model.dump(model_dump_filename)
+
+
 
 
 @click.command()
@@ -46,37 +60,53 @@ def train(task, input_filename, model_dump_filename, test_size):
 @click.option("--model_dump_filename", default="models/dump.json", help="File to dump model")
 @click.option("--output_filename", default="data/processed/prediction.csv", help="Output file for predictions")
 def test(task, input_filename, model_dump_filename, output_filename):
-    # 1. Load the trained model
-    model = DumpableModel(None)  # Initialize with no model
-    model.load(model_dump_filename)
-
-    # 2. Load and preprocess the test data
+    # Load and preprocess the test data
     test_data = make_dataset(input_filename)
 
     # Drop bugged row due of ":"
-    indices_to_drop = [75, 95, 108, 159, 179, 182, 231, 360, 377, 392, 404, 410, 417, 483, 507, 541, 693, 742, 763, 829,
-                       843, 844, 877, 881, 992]
+    indices_to_drop = [75, 95, 108, 159, 179, 182, 231, 360, 377, 392, 404, 410, 417, 483, 507, 541, 693, 742, 763, 829, 843, 844, 877, 881, 992]
     test_data = test_data.drop(indices_to_drop)
 
-    X_test, y, tokens_list = make_features(test_data, task)  # Using the provided task
+    if task == "NER_MODEL":
+        # Instancier le processeur de texte
+        ner_model = NER_Model()
 
-    # 3. Predict using the model
-    predictions = model.predict(X_test)
-    print("predictions = ", predictions)
+        # Traiter le dataframe pour extraire les entités et ajouter une nouvelle colonne avec les résultats NER
+        df_processed = ner_model.process_dataframe(test_data)
 
-    reshaped_pred = reshape_predictions_using_position(predictions, X_test)
+        # Filtre les vidéos qui contiennent le nom spécifié
+        name_to_search = "Frédéric Fromet"  # Remplacez par le nom que vous recherchez
+        df_videos_with_name = ner_model.find_videos_with_name(df_processed, name_to_search)
 
-    # 4. Save predictions to a file
-    with open(output_filename, "w", encoding='utf-8') as f:
-        for video_name, is_name, is_comic, comic_name, tokens, prediction in zip(test_data["video_name"],
-                                                                                 test_data["is_name"],
-                                                                                 test_data["is_comic"],
-                                                                                 test_data["comic_name"],
-                                                                                 test_data["tokens"],
-                                                                                 reshaped_pred):
-            f.write(f"{video_name},{is_name},{is_comic},{comic_name}, {tokens}, {prediction}\n")
+        print(df_videos_with_name)
+        df_videos_with_name.to_csv(output_filename, index=False)
+        print(f"Predictions with NER NAMES saved to {output_filename}")
 
-    print(f"Predictions with video names saved to {output_filename}")
+        return
+
+    else :
+        model = DumpableModel(None)  # Initialize with no model
+        model.load(model_dump_filename)
+
+        X_test, y, tokens_list = make_features(test_data, task)  # Using the provided task
+
+        # 3. Predict using the model
+        predictions = model.predict(X_test)
+        print("predictions = ", predictions)
+
+        reshaped_pred = reshape_predictions_using_position(predictions, X_test)
+
+        # 4. Save predictions to a file
+        with open(output_filename, "w", encoding='utf-8') as f:
+            for video_name, is_name, is_comic, comic_name, tokens, prediction in zip(test_data["video_name"],
+                                                                                     test_data["is_name"],
+                                                                                     test_data["is_comic"],
+                                                                                     test_data["comic_name"],
+                                                                                     test_data["tokens"],
+                                                                                     reshaped_pred):
+                f.write(f"{video_name},{is_name},{is_comic},{comic_name}, {tokens}, {prediction}\n")
+
+        print(f"Predictions with video names saved to {output_filename}")
 
 
 @click.command()
@@ -91,12 +121,12 @@ def evaluate(task, input_filename):
 
     if task == "find_comic_name":
         X, y = P3(df)
+        print(X)
         return calculate_accuracy(X, y)
     else:
         X, y, tokens_list = make_features(df, task)
 
         model = make_model(task=task, dumpable=False)
-        print("model ===", model)
 
         return evaluate_model(model, X, y)
 
@@ -137,7 +167,7 @@ def reshape_predictions_using_position(predictions, X_test):
 
 def P3(df):
     model = DumpableModel(None)  # Initialize with no model
-    model.load('models/model_RDF.json')
+    model.load('models/model_SVM.json')
     X_model_is_comic, y, tokens_list = make_features(df, task="is_comic_video")
     predictions = model.predict(X_model_is_comic)
     df["result_model_is_comic"] = predictions
