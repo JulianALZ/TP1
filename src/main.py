@@ -73,14 +73,17 @@ def test(task, input_filename, model_dump_filename, output_filename):
 
         # Traiter le dataframe pour extraire les entités et ajouter une nouvelle colonne avec les résultats NER
         df_processed = ner_model.process_dataframe(test_data)
+        df_processed.to_csv(output_filename, index=False)
+        print(f"Predictions with NER NAMES saved to {output_filename}")
 
         # Filtre les vidéos qui contiennent le nom spécifié
-        name_to_search = "Frédéric Fromet"  # Remplacez par le nom que vous recherchez
+        name_to_search = "Laurence Bibot"  # Remplacez par le nom que vous recherchez
         df_videos_with_name = ner_model.find_videos_with_name(df_processed, name_to_search)
+        df_videos_with_name.to_csv(output_filename, index=False)
+        print(f"Predictions with NER NAMES for video saved to {output_filename}")
 
         print(df_videos_with_name)
-        df_videos_with_name.to_csv(output_filename, index=False)
-        print(f"Predictions with NER NAMES saved to {output_filename}")
+
 
         return
 
