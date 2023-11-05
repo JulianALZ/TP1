@@ -68,10 +68,12 @@ def preprocess_text_P2_matching_labels(df):
     """
     features_list = []
     labels_list = []
+    tokens_list = []
 
     for index, row in df.iterrows():
         # Tokenize the title
         tokens = tokenize_sentences(row['video_name'])
+        tokens_list.append(tokens)
         individual_labels = ast.literal_eval(row['is_name'])
 
         for i, token in enumerate(tokens):
@@ -92,40 +94,25 @@ def preprocess_text_P2_matching_labels(df):
             features_list.append(features)
             labels_list.append(individual_labels[i])
 
-    return features_list, labels_list
+    return features_list, labels_list, tokens_list
 
 
-# sample_text = "Bilan du premier tour des législatives : la déroute des candidats portés par la complosphère"
-# tokenized_sample = tokenize_sentences(sample_text)
-# print(tokenized_sample)
-# Diagnostic to find the mismatch between number of words and number of labels
-# mismatched_rows_updated = []
-# for index, row in df.iterrows():
-#     num_words = len(tokenize_sentences(row['video_name']))
-#     num_labels = len(eval(row['is_name']))
-#     if num_words != num_labels:
-#         mismatched_rows_updated.append((index, row['video_name'], row['is_name'], num_words, num_labels))
-#         # mismatched_rows_updated.append(index)
-# # Display the mismatched rows
-# print(mismatched_rows_updated)
-# print(len(mismatched_rows_updated))
-
-def make_features(df, task):
+def make_features(df, task, comic_video_model=None, is_name_model=None):
+    tokens_list = None
     if task == "is_comic_video":
         y = df["is_comic"]
         X = df["video_name"].apply(preprocess_text_P1)
 
     elif task == "is_name":
-        # Drop bugged row due of ":"
-        indices_to_drop = [75, 95, 108, 159, 179, 182, 231, 360, 377, 392, 404, 410, 417, 483, 507, 541, 693, 742, 763, 829, 843, 844, 877, 881, 992]
-        df = df.drop(indices_to_drop)
-
-        X, y = preprocess_text_P2_matching_labels(df)
+        X, y, tokens_list = preprocess_text_P2_matching_labels(df)
 
     elif task == "find_comic_name":
         y = df["comic_name"]
 
+
     else:
         raise ValueError("Unknown task")
 
-    return X, y
+    return X, y, tokens_list
+
+

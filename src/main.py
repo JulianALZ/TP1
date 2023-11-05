@@ -1,3 +1,5 @@
+import ast
+
 import click
 import numpy as np
 from sklearn.model_selection import cross_val_predict
@@ -21,9 +23,13 @@ def cli():
 @click.option("--test_size", default=0.2, type=float, help="...")  # ajout
 def train(task, input_filename, model_dump_filename, test_size):
     df = make_dataset(input_filename)
+    # Drop bugged row due of ":"
+    indices_to_drop = [75, 95, 108, 159, 179, 182, 231, 360, 377, 392, 404, 410, 417, 483, 507, 541, 693, 742, 763, 829,
+                       843, 844, 877, 881, 992]
+    df = df.drop(indices_to_drop)
     # explore_data(df)
 
-    X, y = make_features(df, task)
+    X, y, tokens_list = make_features(df, task)
 
     # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42) #ajout
 
@@ -46,12 +52,13 @@ def test(task, input_filename, model_dump_filename, output_filename):
 
     # 2. Load and preprocess the test data
     test_data = make_dataset(input_filename)
-    X_test, y = make_features(test_data, task)  # Using the provided task
 
-    print("X ///////////", X_test[0:10])
-    print("y ///////////", y[0:10])
-    print("LEN X =", len(X_test))
-    print("LEN y =", len(y))
+    # Drop bugged row due of ":"
+    indices_to_drop = [75, 95, 108, 159, 179, 182, 231, 360, 377, 392, 404, 410, 417, 483, 507, 541, 693, 742, 763, 829,
+                       843, 844, 877, 881, 992]
+    test_data = test_data.drop(indices_to_drop)
+
+    X_test, y, tokens_list = make_features(test_data, task)  # Using the provided task
 
     # 3. Predict using the model
     predictions = model.predict(X_test)
@@ -65,7 +72,8 @@ def test(task, input_filename, model_dump_filename, output_filename):
                                                                                  test_data["is_name"],
                                                                                  test_data["is_comic"],
                                                                                  test_data["comic_name"],
-                                                                                 test_data["tokens"], reshaped_pred):
+                                                                                 test_data["tokens"],
+                                                                                 reshaped_pred):
             f.write(f"{video_name},{is_name},{is_comic},{comic_name}, {tokens}, {prediction}\n")
 
     print(f"Predictions with video names saved to {output_filename}")
@@ -75,24 +83,32 @@ def test(task, input_filename, model_dump_filename, output_filename):
 @click.option("--task", help="Can be is_comic_video, is_name or find_comic_name")
 @click.option("--input_filename", default="data/raw/train.csv", help="File training data")
 def evaluate(task, input_filename):
-    # Read CSV
     df = make_dataset(input_filename)
 
-    X, y = make_features(df, task)
+    # Drop bugged row due of ":"
+    indices_to_drop = [75, 95, 108, 159, 179, 182, 231, 360, 377, 392, 404, 410, 417, 483, 507, 541, 693, 742, 763, 829, 843, 844, 877, 881, 992]
+    df = df.drop(indices_to_drop)
 
-    # Object with .fit, .predict methods
-    model = make_model(task=task, dumpable=False)
-    return evaluate_model(model, X, y)
+    if task == "find_comic_name":
+        X, y = P3(df)
+        return calculate_accuracy(X, y)
+    else:
+        X, y, tokens_list = make_features(df, task)
+
+        model = make_model(task=task, dumpable=False)
+        print("model ===", model)
+
+        return evaluate_model(model, X, y)
 
 
 def evaluate_model(model, X, y):
     # Effectuer une validation croisée pour obtenir des prédictions
     y_pred = cross_val_predict(model, X, y, cv=5)
 
-    # Calculer l'accuracy, la précision, le rappel et le F1-score
     accuracy = accuracy_score(y, y_pred)  # Pourcentage de prédictions correctes
     precision = precision_score(y, y_pred, average='weighted')  # Pourcentage de prédictions positives correctes
-    recall = recall_score(y, y_pred, average='weighted')  # Pourcentage de vraies positives par rapport à tous les vrais échantillons
+    recall = recall_score(y, y_pred,
+                          average='weighted')  # Pourcentage de vraies positives par rapport à tous les vrais échantillons
     f1 = f1_score(y, y_pred, average='weighted')  # Moyenne harmonique de précision et rappel
 
     print(f"Accuracy: {100 * accuracy:.2f}%")
@@ -101,18 +117,6 @@ def evaluate_model(model, X, y):
     print(f"F1 Score: {100 * f1:.2f}%")
 
     return accuracy, precision, recall, f1
-
-
-# def evaluate_model(model, X, y):
-#     # Scikit learn has function for cross validation
-#     scores = cross_val_score(model, X, y, scoring="accuracy")
-#     print(f"Got accuracy {100 * np.mean(scores)}%")
-#     return scores
-
-
-cli.add_command(train)
-cli.add_command(test)
-cli.add_command(evaluate)
 
 
 def reshape_predictions_using_position(predictions, X_test):
@@ -130,6 +134,66 @@ def reshape_predictions_using_position(predictions, X_test):
 
     return reshaped_predictions
 
+
+def P3(df):
+    model = DumpableModel(None)  # Initialize with no model
+    model.load('models/model_RDF.json')
+    X_model_is_comic, y, tokens_list = make_features(df, task="is_comic_video")
+    predictions = model.predict(X_model_is_comic)
+    df["result_model_is_comic"] = predictions
+    df2 = df[df['result_model_is_comic'] == 1]
+    # print(df2)
+
+    model = DumpableModel(None)  # Initialize with no model
+    model.load('models_p2/model_RDF.json')
+    X_model_is_name, y, tokens_list = make_features(df2, task="is_name")
+    predictions = model.predict(X_model_is_name)
+    reshaped_pred = reshape_predictions_using_position(predictions, X_model_is_name)
+    extracted_tokens = extract_names(tokens_list, reshaped_pred)
+    list_values = df2["comic_name"].tolist()
+    transformed_list = []
+    for item in list_values:
+        # Évaluer la chaîne en tant que liste Python
+        evaluated_item = ast.literal_eval(item)
+
+        # Ajouter l'élément à la liste transformée si non vide, sinon ajouter None
+        transformed_list.append(evaluated_item[0] if evaluated_item else None)
+
+    return extracted_tokens,  transformed_list
+
+
+def extract_names(tokens_list, mask_list):
+    # Cette liste contiendra tous les tokens concaténés où le masque correspondant est un '1',
+    # ou "None" si aucun '1' n'est trouvé dans la liste de masques.
+    concatenated_tokens = []
+
+    # Parcourir les listes de tokens et de masques.
+    for tokens, mask in zip(tokens_list, mask_list):
+        # Utiliser list comprehension pour extraire les tokens où le masque est '1'.
+        tokens_with_ones = [token for token, flag in zip(tokens, mask) if flag == 1]
+        # Concaténer les tokens avec un espace s'il y en a plus d'un dans la même liste.
+        # Si aucun token avec un '1' n'est trouvé, ajouter "None" à la liste.
+        concatenated_token = ' '.join(tokens_with_ones) if tokens_with_ones else None
+        concatenated_tokens.append(concatenated_token)
+
+    return concatenated_tokens
+
+
+def calculate_accuracy(predicted, actual):
+    # Vérifier que les deux listes ont la même longueur
+    if len(predicted) != len(actual):
+        raise ValueError("Les listes doivent avoir la même longueur.")
+
+    # Calculer le nombre de prédictions correctes
+    correct_predictions = sum(p == a for p, a in zip(predicted, actual))
+
+    # Calculer l'accuracy
+    accuracy = correct_predictions / len(actual)
+    print(accuracy)
+
+cli.add_command(train)
+cli.add_command(test)
+cli.add_command(evaluate)
 
 if __name__ == "__main__":
     cli()
